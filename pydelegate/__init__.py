@@ -55,25 +55,25 @@ class Delegate:
 EMPTY = Delegate()
 
 
-def static_event(*args):
+class EventDescriptor:
+    ''' the `event` descriptor use for instance event. '''
 
-    return EMPTY
+    def __get__(self, obj, objtype):
+        return vars(obj).get(self, EMPTY)
 
-
-def event(*args):
-
-    prop = None
-
-    def getter(self):
-        return vars(self).get(prop, EMPTY)
-
-    def setter(self, value):
+    def __set__(self, obj, value):
         if not isinstance(value, Delegate):
             raise TypeError
-        if value is EMPTY:
-            del vars(self)[prop]
-        else:
-            vars(self)[prop] = value
 
-    prop = property(fget=getter, fset=setter)
-    return prop
+        vars(obj)[self] = value
+
+
+def event(*args, static=None):
+    if static is True:
+        return EMPTY
+
+    if static is None and len(args) == 1:
+        if isinstance(args[0], (classmethod, staticmethod)):
+            return EMPTY
+
+    return EventDescriptor()

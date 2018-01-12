@@ -11,16 +11,16 @@ import sys
 import traceback
 import unittest
 
-from pydelegate import event, static_event
+from pydelegate import event
+
+def callback_add_one(val):
+    return val + 1
+
+def callback_add_two(val):
+    return val + 2
 
 class Test(unittest.TestCase):
-    def test_(self):
-        def callback_1(s):
-            return s + 1
-
-        def callback_2(s):
-            return s + 2
-
+    def test_modes(self):
         class A:
             e0 = event()
 
@@ -28,19 +28,35 @@ class Test(unittest.TestCase):
             def e1(self):
                 pass
 
-            @static_event
+            @event
+            @staticmethod
             def e2(self):
                 pass
 
+            @event
+            @classmethod
+            def e3(cls):
+                pass
 
         a = A()
-        a.e0 += callback_1
-        a.e1 += callback_1
-        A.e2 += callback_1
-        A.e2 += callback_2
+        a.e0 += callback_add_one
+        a.e1 += callback_add_one
+        A.e2 += callback_add_one
+        A.e3 += callback_add_one
         self.assertEqual(a.e0(0), 1)
         self.assertEqual(a.e1(0), 1)
-        self.assertEqual(a.e2(0), 2)
+        self.assertEqual(A.e2(0), 1)
+        self.assertEqual(A.e3(0), 1)
+
+    def test_result_should_be_tail(self):
+        class A:
+            e0 = event()
+
+        a = A()
+        a.e0 += callback_add_one
+        a.e0 += callback_add_two
+        self.assertEqual(a.e0(0), 2)
+
 
 def main(argv=None):
     if argv is None:
