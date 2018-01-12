@@ -9,6 +9,9 @@
 from collections import deque
 from typing import List
 
+class InvokeError(Exception):
+    pass
+
 class Delegate:
     def __init__(self, *delegates):
         self._delegates = delegates
@@ -17,7 +20,11 @@ class Delegate:
         return len(self._delegates) > 0
 
     def __call__(self, *args, **kwargs):
-        ret = None
+        if not self:
+            # case has return value, so cannot be empty.
+            # same with csharp.
+            raise InvokeError('Cannot invoke empty delegate.')
+
         for node in self._delegates:
             ret = node(*args, **kwargs)
         return ret
@@ -36,8 +43,13 @@ class Delegate:
         if isinstance(other, Delegate):
             delegates = list(self._delegates)
             for delegate in other._delegates:
-                delegates.remove(delegate)
+                if delegate in delegates:
+                    delegates.remove(delegate)
+            if len(delegates) == len(self._delegates):
+                return self
         elif callable(other):
+            if other not in self._delegates:
+                return self
             delegates = list(self._delegates)
             delegates.remove(other)
         else:
@@ -51,9 +63,7 @@ class Delegate:
     def get_invocation_list(self):
         return self._delegates
 
-
 EMPTY = Delegate()
-
 
 class EventDescriptor:
     ''' the `event` descriptor use for instance event. '''
@@ -67,8 +77,10 @@ class EventDescriptor:
 
         vars(obj)[self] = value
 
-
 def event(*args, static=None):
+    '''
+    if `static` is `None` and do not decorate on `classmethod` or `staticmethod`, return instance event.
+    '''
     if static is True:
         return EMPTY
 

@@ -11,7 +11,7 @@ import sys
 import traceback
 import unittest
 
-from pydelegate import event
+from pydelegate import event, InvokeError
 
 def callback_add_one(val):
     return val + 1
@@ -56,6 +56,33 @@ class Test(unittest.TestCase):
         a.e0 += callback_add_one
         a.e0 += callback_add_two
         self.assertEqual(a.e0(0), 2)
+
+    def test_remove_node(self):
+        class A:
+            e0 = event()
+
+            def f(self):
+                pass
+
+            def o(self):
+                pass
+
+        a = A()
+        self.assertIsNot(a.f, a.f)
+        a.e0 += a.f
+        self.assertEqual(len(a.e0.get_invocation_list()), 1)
+        a.e0 -= a.o
+        self.assertEqual(len(a.e0.get_invocation_list()), 1)
+        a.e0 -= a.f
+        self.assertEqual(len(a.e0.get_invocation_list()), 0)
+
+    def test_empty_invoke(self):
+        class A:
+            e0 = event()
+
+        a = A()
+        with self.assertRaises(InvokeError):
+            a.e0()
 
 
 def main(argv=None):
