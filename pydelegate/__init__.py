@@ -25,9 +25,16 @@ class Delegate:
             # same with csharp.
             raise InvokeError('Cannot invoke empty delegate.')
 
-        for node in self._delegates:
-            ret = node(*args, **kwargs)
+        for delegate in self._delegates:
+            ret = delegate(*args, **kwargs)
         return ret
+
+    def __eq__(self, other):
+        if not isinstance(other, Delegate):
+            return False
+        if len(self._delegates) != len(other._delegates):
+            return False
+        return all(l == r for l, r in zip(self._delegates, other._delegates))
 
     def __add__(self, other):
         if isinstance(other, Delegate):
@@ -40,6 +47,9 @@ class Delegate:
             raise ValueError
 
     def __sub__(self, other):
+        if other is self:
+            return EMPTY
+
         if isinstance(other, Delegate):
             delegates = list(self._delegates)
             for delegate in other._delegates:
