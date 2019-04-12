@@ -9,93 +9,69 @@
 from collections import deque
 from typing import List
 
-class InvokeError(Exception):
-    pass
-
 class Delegate:
-    def __init__(self, *delegates):
-        self._delegates = delegates
+    __slots__ = ('_funcs')
+
+    def __init__(self, *funcs):
+        self._funcs = funcs
 
     def __bool__(self):
-        return len(self._delegates) > 0
+        return len(self._funcs) > 0
 
     def __call__(self, *args, **kwargs):
-        if not self:
-            # case has return value, so cannot be empty.
-            # same with csharp.
-            raise InvokeError('Cannot invoke empty delegate.')
+        return self.invoke(*args, **kwargs)
 
-        for delegate in self._delegates:
-            ret = delegate(*args, **kwargs)
-        return ret
+    def invoke(self, *args, **kwargs):
+        if not self:
+            raise RuntimeError('Cannot invoke empty delegate.')
+
+        rets = tuple(f(*args, **kwargs) for f in self._funcs)
+        return rets[-1]
 
     def __eq__(self, other):
         if not isinstance(other, Delegate):
             return False
-        if len(self._delegates) != len(other._delegates):
-            return False
-        return all(l == r for l, r in zip(self._delegates, other._delegates))
+        return self._funcs == other._funcs
 
     def __add__(self, other):
+        funcs = self._funcs
+
         if isinstance(other, Delegate):
-            if len(self._delegates) + len(other._delegates) == 0:
-                return EMPTY
-            return Delegate(*self._delegates, *other._delegates)
+            funcs += other._funcs
         elif callable(other):
-            return Delegate(*self._delegates, other)
+            funcs += (other, )
         else:
             raise ValueError
+
+        return Delegate(*funcs) if funcs else EMPTY
 
     def __sub__(self, other):
         if other is self:
             return EMPTY
 
+        funcs = list(self._funcs)
+
         if isinstance(other, Delegate):
-            delegates = list(self._delegates)
-            for delegate in other._delegates:
-                if delegate in delegates:
-                    delegates.remove(delegate)
-            if len(delegates) == len(self._delegates):
-                return self
+            for func in other._funcs:
+                try:
+                    funcs.remove(func)
+                except ValueError:
+                    pass
         elif callable(other):
-            if other not in self._delegates:
-                return self
-            delegates = list(self._delegates)
-            delegates.remove(other)
+            try:
+                funcs.remove(other)
+            except ValueError:
+                pass
         else:
             raise ValueError
 
-        if delegates:
-            return Delegate(*delegates)
-        else:
+        if len(funcs) == len(self._funcs):
+            return self
+        if len(funcs) == 0:
             return EMPTY
+        return Delegate(*funcs)
 
     def get_invocation_list(self):
-        return self._delegates
+        return self._funcs
 
-EMPTY = Delegate()
-
-class EventDescriptor:
-    ''' the `event` descriptor use for instance event. '''
-
-    def __get__(self, obj, objtype):
-        return vars(obj).get(self, EMPTY)
-
-    def __set__(self, obj, value):
-        if not isinstance(value, Delegate):
-            raise TypeError
-
-        vars(obj)[self] = value
-
-def event(*args, static=None):
-    '''
-    if `static` is `None` and do not decorate on `classmethod` or `staticmethod`, return instance event.
-    '''
-    if static is True:
-        return EMPTY
-
-    if static is None and len(args) == 1:
-        if isinstance(args[0], (classmethod, staticmethod)):
-            return EMPTY
-
-    return EventDescriptor()
+EMPTY = Delegate() # the cached empty delegate

@@ -6,92 +6,61 @@
 #
 # ----------
 
-import os
-import sys
-import traceback
 import unittest
 
-from pydelegate import event, InvokeError
+from pytest import raises
 
-def callback_add_one(val):
-    return val + 1
+from pydelegate import Delegate
 
-def callback_add_two(val):
-    return val + 2
+def test_delegate_init():
+    assert not Delegate(), 'delegate should be empty'
 
-class Test(unittest.TestCase):
-    def test_modes(self):
-        class A:
-            e0 = event()
+def test_delegate_equals():
+    assert Delegate() == Delegate(), 'empty should equals'
 
-            @event
-            def e1(self):
-                pass
+    def func():
+        pass
 
-            @event
-            @staticmethod
-            def e2(self):
-                pass
+    d1 = Delegate()
+    d1 += func
+    d2 = Delegate()
+    d2 += func
+    assert d1 == d2, 'delegates should equals if they has same callback'
 
-            @event
-            @classmethod
-            def e3(cls):
-                pass
+def test_delegate_invoke_empty():
+    with raises(RuntimeError):
+        Delegate()()
 
-        a = A()
-        a.e0 += callback_add_one
-        a.e1 += callback_add_one
-        A.e2 += callback_add_one
-        A.e3 += callback_add_one
-        self.assertEqual(a.e0(0), 1)
-        self.assertEqual(a.e1(0), 1)
-        self.assertEqual(A.e2(0), 1)
-        self.assertEqual(A.e3(0), 1)
+def test_delegate_should_call_one_by_one():
+    def func1(ls: list):
+        ls.append(1)
 
-    def test_result_should_be_tail(self):
-        class A:
-            e0 = event()
+    def func2(ls: list):
+        ls.append(2)
 
-        a = A()
-        a.e0 += callback_add_one
-        a.e0 += callback_add_two
-        self.assertEqual(a.e0(0), 2)
+    d = Delegate()
+    d += func1
+    d += func2
+    src = []
+    d(src)
+    assert src == [1, 2], 'delegate should call one by one'
 
-    def test_remove_node(self):
-        class A:
-            e0 = event()
+def test_delegate_retval():
+    def func():
+        return 1
 
-            def f(self):
-                pass
+    d = Delegate()
+    d += func
+    assert d() == 1, 'delegate should has return value'
 
-            def o(self):
-                pass
+def test_delegate_retval_should_be_the_last():
+    def func1():
+        return 1
 
-        a = A()
-        self.assertIsNot(a.f, a.f)
-        a.e0 += a.f
-        self.assertEqual(len(a.e0.get_invocation_list()), 1)
-        a.e0 -= a.o
-        self.assertEqual(len(a.e0.get_invocation_list()), 1)
-        a.e0 -= a.f
-        self.assertEqual(len(a.e0.get_invocation_list()), 0)
+    def func2():
+        return 2
 
-    def test_empty_invoke(self):
-        class A:
-            e0 = event()
-
-        a = A()
-        with self.assertRaises(InvokeError):
-            a.e0()
-
-
-def main(argv=None):
-    if argv is None:
-        argv = sys.argv
-    try:
-        unittest.main()
-    except Exception:
-        traceback.print_exc()
-
-if __name__ == '__main__':
-    main()
+    d = Delegate()
+    d += func1
+    d += func2
+    assert d() == 2, 'delegate return value should be the last callback'
