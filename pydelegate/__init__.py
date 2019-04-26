@@ -117,8 +117,11 @@ class Delegate:
         elif len(self._funcs) == 1:
             return self._funcs[0] == other
 
-        else:
+        elif len(self._funcs) == 0:
             return other is None
+
+        else:
+            return False
 
     def __contains__(self, item):
         return item in self._funcs
@@ -158,6 +161,19 @@ class _BoundedDelegate(Delegate):
 
     def _call_func(self, func, args, kwargs):
         return func(self._target, *args, **kwargs)
+
+    def __hash__(self):
+        return hash(_BoundedDelegate) ^ hash(self._funcs) ^ hash(id(self._target))
+
+    def __eq__(self, other):
+        if isinstance(other, _BoundedDelegate):
+            return self._target is other._target and self._funcs == other._funcs
+
+        elif len(self._funcs) == 0:
+            return other is None
+
+        else:
+            return False
 
 
 
