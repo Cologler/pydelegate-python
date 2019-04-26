@@ -1,77 +1,144 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (c) 2017~2999 - cologler <skyoflw@gmail.com>
+# Copyright (c) 2019~2999 - Cologler <skyoflw@gmail.com>
 # ----------
 #
 # ----------
 
-from collections import deque
 from typing import List
 
+class MultiInvokeError(Exception):
+    def __init__(self, errors, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._errors = tuple(errors)
+
+    @property
+    def errors(self) -> List[Exception]:
+        return self._errors
+
+
 class Delegate:
+    '''
+    `Delegate` is immutable object.
+    '''
+
     __slots__ = ('_funcs')
 
-    def __init__(self, *funcs):
-        self._funcs = funcs
+    def __init__(self):
+        self._funcs = ()
+
+    def __repr__(self):
+        return f'Delegate{self._funcs!r}'
 
     def __bool__(self):
         return len(self._funcs) > 0
 
-    def __call__(self, *args, **kwargs):
-        return self.invoke(*args, **kwargs)
-
-    def invoke(self, *args, **kwargs):
-        if not self:
-            raise RuntimeError('Cannot invoke empty delegate.')
-
-        rets = tuple(f(*args, **kwargs) for f in self._funcs)
-        return rets[-1]
-
-    def __eq__(self, other):
-        if not isinstance(other, Delegate):
-            return False
-        return self._funcs == other._funcs
-
-    def __add__(self, other):
-        funcs = self._funcs
+    def __radd__(self, other):
+        # usage: other += Delegate()
+        s_funcs = self._funcs
 
         if isinstance(other, Delegate):
-            funcs += other._funcs
+            if not s_funcs:
+                return other
+            o_funcs = other._funcs
         elif callable(other):
-            funcs += (other, )
+            o_funcs = (other, )
+        elif other is None:
+            # None + Delegate() -> Delegate()
+            o_funcs = ()
         else:
-            raise ValueError
+            raise ValueError('other must be callable')
 
-        return Delegate(*funcs) if funcs else EMPTY
+        if o_funcs:
+            rv = Delegate()
+            rv._funcs = s_funcs + o_funcs
+            return rv
+        else:
+            return self
+
+    def __add__(self, other):
+        # usage: Delegate() += other
+        # so other cannot be `None`
+
+        if other is None:
+            raise TypeError('other cannot be None')
+
+        return self.__radd__(other)
 
     def __sub__(self, other):
         if other is self:
-            return EMPTY
+            if self._funcs:
+                return Delegate()
+            else:
+                return self
+
+        elif other is None:
+            raise TypeError('other cannot be None')
 
         funcs = list(self._funcs)
+        funcs.reverse()
 
         if isinstance(other, Delegate):
+            if not other:
+                return self
+
             for func in other._funcs:
                 try:
                     funcs.remove(func)
                 except ValueError:
-                    pass
-        elif callable(other):
+                    raise ValueError(f'{func!r} is not in {self!r}')
+
+        else:
             try:
                 funcs.remove(other)
             except ValueError:
-                pass
+                raise ValueError(f'{other!r} is not in {self!r}')
+
+        funcs.reverse()
+
+        # funcs must changed.
+        if funcs:
+            rv = Delegate()
+            rv._funcs = tuple(funcs)
+            return rv
         else:
-            raise ValueError
+            return Delegate()
 
-        if len(funcs) == len(self._funcs):
-            return self
-        if len(funcs) == 0:
-            return EMPTY
-        return Delegate(*funcs)
+    def __call__(self, *args, **kwargs):
+        return self.invoke(*args, **kwargs)
 
-    def get_invocation_list(self):
-        return self._funcs
+    def __hash__(self):
+        return hash(Delegate) ^ hash(self._funcs)
 
-EMPTY = Delegate() # the cached empty delegate
+    def __eq__(self, other):
+        if isinstance(other, Delegate):
+            return self._funcs == other._funcs
+
+        elif len(self._funcs) == 1:
+            return self._funcs[0] == other
+
+        else:
+            return other is None
+
+    def __contains__(self, item):
+        return item in self._funcs
+
+    def invoke(self, *args, **kwargs):
+        if not self:
+            raise RuntimeError(f'{self!r} is empty')
+
+        ret = None
+        errors = []
+        for func in self._funcs:
+            try:
+                ret = func(*args, **kwargs)
+            except Exception as e:
+                errors.append(e)
+
+        if errors:
+            raise MultiInvokeError(errors)
+
+        return ret
+
+
+event = Delegate()
