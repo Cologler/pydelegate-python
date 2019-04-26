@@ -10,7 +10,7 @@ import unittest
 
 from pytest import raises
 
-from pydelegate import Delegate, event_handler
+from pydelegate import Delegate, event_handler, event
 
 def test_delegate_init():
     assert not Delegate(), 'delegate should be empty'
@@ -131,6 +131,7 @@ def test_delegate_on_instance_method():
     assert a1.d
     assert a1.d() == 1
 
+
 def test_event_handler():
     def func():
         return 1
@@ -139,3 +140,51 @@ def test_event_handler():
     d += event_handler(func)
 
     assert d() == 1
+
+
+def test_event_as_method():
+    class A:
+        @event
+        def d(self):
+            pass
+
+        e = event('e')
+
+    def func1(self, ls: list):
+        ls.append(1)
+
+    def func2(self, ls: list):
+        ls.append(2)
+
+    a1 = A()
+    assert not a1.d
+    a1.d += func1
+    a1.d += func2
+    assert not A.d
+    src = []
+    a1.d(src)
+    assert src == [1, 2]
+
+    def func3(self, ls: list):
+        ls.append(3)
+
+    def func4(self, ls: list):
+        ls.append(4)
+
+    a2 = A()
+    assert not a2.e
+    a2.e += func3
+    a2.e += func4
+    assert not A.e
+    src = []
+    a2.e(src)
+    assert src == [3, 4]
+
+def test_event_as_classmethod():
+    class A:
+        @event
+        def d(self):
+            pass
+
+    assert A.d is None
+    # should not use `A.d += ?`, this will overwrite the `event`

@@ -32,4 +32,24 @@ d += event_handler(func) # event_handler() return a `Delegate`
 assert d() == 1
 ```
 
+or if you want inject `self` var in your instance method, use `event` data descriptor:
+
+``` py
+from pydelegate import event
+
+class A:
+    @event
+    def d(self):
+        pass
+    # or
+    e = event('e')
+
+def func(self):
+    return 1
+
+a = A()
+a.d += func
+assert a.d() == 1
+```
+
 read unittests for more usages.

@@ -131,7 +131,7 @@ class Delegate:
         errors = []
         for func in self._funcs:
             try:
-                ret = func(*args, **kwargs)
+                ret = self._call_func(func, args, kwargs)
             except Exception as e:
                 errors.append(e)
 
@@ -140,8 +140,53 @@ class Delegate:
 
         return ret
 
+    def _call_func(self, func, args, kwargs):
+        return func(*args, **kwargs)
 
-event = Delegate()
+    def _bound(self, target):
+        d = _BoundedDelegate(target)
+        d._funcs = self._funcs
+        return d
+
+
+class _BoundedDelegate(Delegate):
+    __slots__ = ('_target')
+
+    def __init__(self, target):
+        super().__init__()
+        self._target = None
+
+    def _call_func(self, func, args, kwargs):
+        return func(self._target, *args, **kwargs)
+
+
+
+class event:
+    '''
+    a data descriptor use for class.
+
+    so when you want to get `Delegate` from the attr, we can bound the Delegate with `self` argument.
+    '''
+
+    def __init__(self, func_or_name):
+        self._name = str(getattr(func_or_name, '__name__', func_or_name))
+
+    def __get__(self, obj, cls):
+        if obj is not None:
+            d = vars(obj).get(self._name, Delegate())
+            if d:
+                return d._bound(obj)
+            else:
+                return d
+        else:
+            return None
+
+    def __set__(self, obj, value):
+        if not isinstance(value, Delegate):
+            raise TypeError(f'{value!r} is not a Delegate')
+
+        d = vars(obj)
+        d[self._name] = value
 
 
 def event_handler(func):
