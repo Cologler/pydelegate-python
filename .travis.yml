@@ -2,9 +2,12 @@ language: python
 dist: xenial
 sudo: true
 python:
+  - '3.6'
   - '3.7'
+install:
+  - pipenv install --dev
 script:
-  - python -m pytest test.py -vv
+  - python -m pytest
 deploy:
   provider: pypi
   user: $PYPI_USER
