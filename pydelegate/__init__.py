@@ -142,3 +142,21 @@ class Delegate:
 
 
 event = Delegate()
+
+
+def event_handler(func):
+    '''
+    decorate a function to a Delegate.
+
+    usage:
+
+    ``` py
+    @event_handler
+    def func(): 1
+
+    a = None
+    a += func
+    assert a == 1
+    ```
+    '''
+    return Delegate() + func
