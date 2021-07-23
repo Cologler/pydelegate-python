@@ -50,7 +50,7 @@ class Delegate:
             # None + Delegate() -> Delegate()
             o_funcs = ()
         else:
-            raise ValueError('other must be callable')
+            raise TypeError('other must be callable')
 
         if o_funcs:
             rv = Delegate(*s_funcs, *o_funcs)
