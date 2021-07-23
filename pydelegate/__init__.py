@@ -5,7 +5,7 @@
 #
 # ----------
 
-from typing import List
+from typing import Tuple
 
 class MultiInvokeError(Exception):
     def __init__(self, errors, *args, **kwargs):
@@ -13,8 +13,11 @@ class MultiInvokeError(Exception):
         self._errors = tuple(errors)
 
     @property
-    def errors(self) -> List[Exception]:
+    def errors(self) -> Tuple[Exception, ...]:
         return self._errors
+
+    def __repr__(self):
+        return f'MultiInvokeError({self.errors!r})'
 
 
 class Delegate:
@@ -22,25 +25,25 @@ class Delegate:
     `Delegate` is immutable object.
     '''
 
-    __slots__ = ('_funcs')
+    __slots__ = ('__funcs', )
 
-    def __init__(self):
-        self._funcs = ()
+    def __init__(self, *funcs):
+        self.__funcs = funcs
 
     def __repr__(self):
-        return f'Delegate{self._funcs!r}'
+        return f'Delegate{self.__funcs!r}'
 
     def __bool__(self):
-        return len(self._funcs) > 0
+        return len(self.__funcs) > 0
 
     def __radd__(self, other):
         # usage: other += Delegate()
-        s_funcs = self._funcs
+        s_funcs = self.__funcs
 
         if isinstance(other, Delegate):
             if not s_funcs:
                 return other
-            o_funcs = other._funcs
+            o_funcs = other.__funcs
         elif callable(other):
             o_funcs = (other, )
         elif other is None:
@@ -50,8 +53,7 @@ class Delegate:
             raise ValueError('other must be callable')
 
         if o_funcs:
-            rv = Delegate()
-            rv._funcs = s_funcs + o_funcs
+            rv = Delegate(*s_funcs, *o_funcs)
             return rv
         else:
             return self
@@ -67,7 +69,7 @@ class Delegate:
 
     def __sub__(self, other):
         if other is self:
-            if self._funcs:
+            if self.__funcs:
                 return Delegate()
             else:
                 return self
@@ -75,14 +77,14 @@ class Delegate:
         elif other is None:
             raise TypeError('other cannot be None')
 
-        funcs = list(self._funcs)
+        funcs = list(self.__funcs)
         funcs.reverse()
 
         if isinstance(other, Delegate):
             if not other:
                 return self
 
-            for func in other._funcs:
+            for func in other.__funcs:
                 try:
                     funcs.remove(func)
                 except ValueError:
@@ -98,8 +100,7 @@ class Delegate:
 
         # funcs must changed.
         if funcs:
-            rv = Delegate()
-            rv._funcs = tuple(funcs)
+            rv = Delegate(*funcs)
             return rv
         else:
             return Delegate()
@@ -108,23 +109,23 @@ class Delegate:
         return self.invoke(*args, **kwargs)
 
     def __hash__(self):
-        return hash(Delegate) ^ hash(self._funcs)
+        return hash(Delegate) ^ hash(self.__funcs)
 
     def __eq__(self, other):
         if isinstance(other, Delegate):
-            return self._funcs == other._funcs
+            return self.__funcs == other.__funcs
 
-        elif len(self._funcs) == 1:
-            return self._funcs[0] == other
+        elif len(self.__funcs) == 1:
+            return self.__funcs[0] == other
 
-        elif len(self._funcs) == 0:
+        elif len(self.__funcs) == 0:
             return other is None
 
         else:
             return False
 
     def __contains__(self, item):
-        return item in self._funcs
+        return item in self.__funcs
 
     def invoke(self, *args, **kwargs):
         if not self:
@@ -132,7 +133,7 @@ class Delegate:
 
         ret = None
         errors = []
-        for func in self._funcs:
+        for func in self.__funcs:
             try:
                 ret = self._call_func(func, args, kwargs)
             except Exception as e:
@@ -147,29 +148,28 @@ class Delegate:
         return func(*args, **kwargs)
 
     def _bound(self, target):
-        d = _BoundedDelegate(target)
-        d._funcs = self._funcs
+        d = _BoundedDelegate(target, *self.__funcs)
         return d
 
 
 class _BoundedDelegate(Delegate):
-    __slots__ = ('_target')
+    __slots__ = ('__target', )
 
-    def __init__(self, target):
-        super().__init__()
-        self._target = None
+    def __init__(self, target, *funcs):
+        super().__init__(*funcs)
+        self.__target = target
 
     def _call_func(self, func, args, kwargs):
-        return func(self._target, *args, **kwargs)
+        return func(self.__target, *args, **kwargs)
 
     def __hash__(self):
-        return hash(_BoundedDelegate) ^ hash(self._funcs) ^ hash(id(self._target))
+        return hash(_BoundedDelegate) ^ hash(self.__funcs) ^ hash(id(self.__target))
 
     def __eq__(self, other):
         if isinstance(other, _BoundedDelegate):
-            return self._target is other._target and self._funcs == other._funcs
+            return self.__target is other.__target and self.__funcs == other.__funcs
 
-        elif len(self._funcs) == 0:
+        elif len(self.__funcs) == 0:
             return other is None
 
         else:
@@ -220,4 +220,4 @@ def event_handler(func):
     assert a == 1
     ```
     '''
-    return Delegate() + func
+    return Delegate(func)
