@@ -5,17 +5,21 @@ python:
   - '3.7'
   - '3.8'
   - '3.9'
+
 before_install:
   - pip install poetry
 install:
   - poetry install
+
 script:
   - python -m pytest
+
+before_deploy:
+  - poetry config http-basic.pypi $PYPI_USER $PYPI_PW
+  - poetry build -f sdist
 deploy:
-  provider: pypi
-  user: $PYPI_USER
-  password: $PYPI_PW
-  distributions: "sdist bdist_wheel"
+  provider: script
+  script: poetry publish
   skip_existing: true
   on:
     tags: true

@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "a python version delegate like C#"
 authors = ["Cologler <skyoflw@gmail.com>"]
 license = "MIT"
+homepage = "https://github.com/Cologler/pydelegate-python"
+keywords = ["delegate", "hook"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.6"
