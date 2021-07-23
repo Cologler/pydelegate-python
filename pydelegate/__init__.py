@@ -8,21 +8,21 @@
 from typing import Tuple
 
 
-class InvokeEmptyDelegateError(RuntimeError):
+class InvokeEmptyDelegateError(Exception):
     'raised when invoke a empty delegate.'
 
 
-class MultiInvokeError(Exception):
+class InvokeAggregateError(Exception):
     def __init__(self, errors, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._errors = tuple(errors)
+        self.__errors = tuple(errors)
 
     @property
     def errors(self) -> Tuple[Exception, ...]:
-        return self._errors
+        return self.__errors
 
     def __repr__(self):
-        return f'MultiInvokeError({self.errors!r})'
+        return f'InvokeAggregateError({self.errors!r})'
 
 
 class Delegate:
@@ -144,7 +144,7 @@ class Delegate:
                 errors.append(e)
 
         if errors:
-            raise MultiInvokeError(errors)
+            raise InvokeAggregateError(errors)
 
         return ret
 
@@ -219,7 +219,7 @@ __all__ = [
     'Delegate', 'event',
 
     # errors
-    'InvokeEmptyDelegateError',
+    'InvokeEmptyDelegateError', 'InvokeAggregateError',
 
     # alias
     'delegate', 'event_handler',
