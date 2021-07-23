@@ -55,7 +55,7 @@ def test_delegate_eq_items():
     d2 += func2
     assert d1 != d2
 
-def test_delegate_invoke_should_one_by_one():
+def test_delegate_invoke_order():
     def func1(ls: list):
         ls.append(1)
 
@@ -67,9 +67,9 @@ def test_delegate_invoke_should_one_by_one():
     d += func2
     dest = []
     d(dest)
-    assert dest == [1, 2]
+    assert dest == [1, 2], 'should first in first run'
 
-def test_delegate_return_value():
+def test_delegate_invoke_return_value():
     def func1():
         return 1
 
@@ -79,7 +79,7 @@ def test_delegate_return_value():
     d = Delegate()
     d += func1
     d += func2
-    assert d() == 2
+    assert d() == 2, 'should be the last one'
 
 def test_delegate_add_from_none():
     d = None
@@ -111,9 +111,9 @@ def test_delegate_remove_order():
     d -= func1
     src = []
     d(src)
-    assert src == [1, 2]
+    assert src == [1, 2], 'should remove the last match'
 
-def test_delegate_on_class_method():
+def test_delegate_as_class_member():
     class A:
         d = Delegate()
 
@@ -123,9 +123,9 @@ def test_delegate_on_class_method():
     A = A()
     A.d += func
     assert A.d
-    assert A.d() == 1
+    assert A.d() == 1, 'call without self argument'
 
-def test_delegate_on_instance_method():
+def test_delegate_as_instance_member():
     class A:
         d = Delegate()
 
@@ -136,10 +136,10 @@ def test_delegate_on_instance_method():
     a1.d += func
     assert not A.d
     assert a1.d
-    assert a1.d() == 1
+    assert a1.d() == 1, 'call with self argument'
 
 
-def test_event_as_method():
+def test_event_as_instance_member():
     class A:
         @event
         def d(self):
@@ -177,7 +177,7 @@ def test_event_as_method():
     a2.e(src)
     assert src == [3, 4]
 
-def test_event_as_classmethod():
+def test_event_as_class_member():
     class A:
         @event
         def d(self):
