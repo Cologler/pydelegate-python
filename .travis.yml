@@ -1,18 +1,24 @@
 language: python
 dist: xenial
-sudo: true
 python:
   - '3.6'
   - '3.7'
+  - '3.8'
+  - '3.9'
+
+before_install:
+  - pip install poetry poetry-dynamic-versioning
 install:
-  - pipenv install --dev
+  - poetry install
+
 script:
   - python -m pytest
+
+before_deploy:
+  - poetry config http-basic.pypi $PYPI_USER $PYPI_PW
 deploy:
-  provider: pypi
-  user: $PYPI_USER
-  password: $PYPI_PW
-  distributions: "sdist bdist_wheel"
-  skip_existing: true
+  provider: script
+  script: poetry publish --build
+  skip_cleanup: true
   on:
     tags: true
