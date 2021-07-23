@@ -53,8 +53,7 @@ class Delegate:
             raise TypeError('other must be callable')
 
         if o_funcs:
-            rv = Delegate(*s_funcs, *o_funcs)
-            return rv
+            return Delegate(*s_funcs, *o_funcs)
         else:
             return self
 

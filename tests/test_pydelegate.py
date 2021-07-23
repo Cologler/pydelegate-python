@@ -12,8 +12,10 @@ from pytest import raises
 
 from pydelegate import Delegate, event
 
-def test_delegate_init():
-    assert not Delegate(), 'delegate should be empty'
+def test_delegate_testable():
+    assert not Delegate(), 'test empty delegate should be false'
+    assert Delegate(lambda: None)
+    assert Delegate(lambda: None, lambda: None)
 
 def test_delegate_eq_ref():
     assert Delegate() is not Delegate()
