@@ -10,18 +10,20 @@ import unittest
 
 from pytest import raises
 
-from pydelegate import Delegate, event
+from pydelegate import Delegate, event, InvokeEmptyDelegateError
 
 def test_delegate_testable():
     assert not Delegate(), 'test empty delegate should be false'
     assert Delegate(lambda: None)
     assert Delegate(lambda: None, lambda: None)
 
-def test_delegate_eq_ref():
+def test_delegate_equals():
     assert Delegate() is not Delegate()
-
-def test_delegate_eq_empty():
     assert Delegate() == Delegate()
+    assert Delegate(lambda: None) != Delegate(lambda: None)
+    fn = lambda: None
+    assert Delegate(fn) == Delegate(fn)
+    assert Delegate(fn) != Delegate(fn, fn)
 
 def test_delegate_eq_items():
     def func1(): pass
@@ -46,8 +48,11 @@ def test_delegate_eq_items():
     d2 += func2
     assert d1 != d2
 
-def test_delegate_invoke_empty():
+def test_empty_delegate_invoke_raise_error():
     with raises(RuntimeError):
+        Delegate()()
+
+    with raises(InvokeEmptyDelegateError):
         Delegate()()
 
 def test_delegate_invoke_each_one():

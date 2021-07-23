@@ -7,6 +7,11 @@
 
 from typing import Tuple
 
+
+class InvokeEmptyDelegateError(RuntimeError):
+    'raised when invoke a empty delegate.'
+
+
 class MultiInvokeError(Exception):
     def __init__(self, errors, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -128,7 +133,7 @@ class Delegate:
 
     def invoke(self, *args, **kwargs):
         if not self:
-            raise RuntimeError(f'{self!r} is empty')
+            raise InvokeEmptyDelegateError(f'{self!r} is empty')
 
         ret = None
         errors = []
@@ -210,6 +215,12 @@ delegate = Delegate
 event_handler = Delegate
 
 __all__ = [
+    # public api
     'Delegate', 'event',
+
+    # errors
+    'InvokeEmptyDelegateError',
+
+    # alias
     'delegate', 'event_handler',
 ]
