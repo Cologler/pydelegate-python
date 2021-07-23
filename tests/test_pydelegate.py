@@ -10,7 +10,7 @@ import unittest
 
 from pytest import raises
 
-from pydelegate import Delegate, event_handler, event
+from pydelegate import Delegate, event
 
 def test_delegate_init():
     assert not Delegate(), 'delegate should be empty'
@@ -130,16 +130,6 @@ def test_delegate_on_instance_method():
     assert not A.d
     assert a1.d
     assert a1.d() == 1
-
-
-def test_event_handler():
-    def func():
-        return 1
-
-    d = None
-    d += event_handler(func)
-
-    assert d() == 1
 
 
 def test_event_as_method():
