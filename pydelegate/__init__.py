@@ -203,3 +203,14 @@ class event:
 
         d = vars(obj)
         d[self._name] = value
+
+# alias
+delegate = Delegate
+
+# deprecated, but kept compatible
+event_handler = Delegate
+
+__all__ = [
+    'Delegate', 'event',
+    'delegate', 'event_handler',
+]
