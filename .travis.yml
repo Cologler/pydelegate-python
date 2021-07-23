@@ -7,7 +7,7 @@ python:
   - '3.9'
 
 before_install:
-  - pip install poetry
+  - pip install poetry poetry-dynamic-versioning
 install:
   - poetry install
 
@@ -16,10 +16,9 @@ script:
 
 before_deploy:
   - poetry config http-basic.pypi $PYPI_USER $PYPI_PW
-  - poetry build -f sdist
 deploy:
   provider: script
-  script: poetry publish
-  skip_existing: true
+  script: poetry publish --build
+  skip_cleanup: true
   on:
     tags: true

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pydelegate"
-version = "0.1.0"
+version = "0.0.0"
 description = "a python version delegate like C#"
 authors = ["Cologler <skyoflw@gmail.com>"]
 license = "MIT"
@@ -14,6 +14,9 @@ python = "^3.6"
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"
 
+[tool.poetry-dynamic-versioning]
+enable = true
+
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
 build-backend = "poetry.core.masonry.api"
