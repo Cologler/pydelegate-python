@@ -12,6 +12,13 @@ from pytest import raises
 
 from pydelegate import Delegate, event, InvokeEmptyDelegateError
 
+def test_empty_delegate_invoke_raise_error():
+    with raises(RuntimeError):
+        Delegate()()
+
+    with raises(InvokeEmptyDelegateError):
+        Delegate()()
+
 def test_delegate_testable():
     assert not Delegate(), 'test empty delegate should be false'
     assert Delegate(lambda: None)
@@ -48,14 +55,7 @@ def test_delegate_eq_items():
     d2 += func2
     assert d1 != d2
 
-def test_empty_delegate_invoke_raise_error():
-    with raises(RuntimeError):
-        Delegate()()
-
-    with raises(InvokeEmptyDelegateError):
-        Delegate()()
-
-def test_delegate_invoke_each_one():
+def test_delegate_invoke_should_one_by_one():
     def func1(ls: list):
         ls.append(1)
 
@@ -65,9 +65,9 @@ def test_delegate_invoke_each_one():
     d = Delegate()
     d += func1
     d += func2
-    src = []
-    d(src)
-    assert src == [1, 2]
+    dest = []
+    d(dest)
+    assert dest == [1, 2]
 
 def test_delegate_return_value():
     def func1():
