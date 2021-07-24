@@ -13,9 +13,6 @@ from pytest import raises
 from pydelegate import Delegate, event, InvokeEmptyDelegateError
 
 def test_empty_delegate_invoke_raise_error():
-    with raises(RuntimeError):
-        Delegate()()
-
     with raises(InvokeEmptyDelegateError):
         Delegate()()
 
