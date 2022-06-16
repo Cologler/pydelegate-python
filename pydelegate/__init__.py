@@ -5,7 +5,7 @@
 #
 # ----------
 
-from typing import Tuple
+from typing import Tuple, final
 
 
 class InvokeEmptyDelegateError(Exception):
@@ -25,6 +25,7 @@ class InvokeAggregateError(Exception):
         return f'InvokeAggregateError({self.errors!r})'
 
 
+@final
 class Delegate:
     '''
     `Delegate` is immutable object.
@@ -36,6 +37,9 @@ class Delegate:
         self.__funcs = funcs
         self.__raise_on_empty = raise_on_empty
 
+    def _with_funcs(self, *funcs):
+        return Delegate(*funcs, raise_on_empty=self.__raise_on_empty)
+
     def _init_args(self):
         'get the init args of this delegate.'
         return self.__funcs, {'raise_on_empty': self.__raise_on_empty}
@@ -46,73 +50,58 @@ class Delegate:
     def __bool__(self):
         return len(self.__funcs) > 0
 
+    @staticmethod
+    def combine(first: 'Delegate', second):
+        assert isinstance(first, Delegate)
+
+        f_funcs = first.__funcs
+        s_kwargs = first._init_args()[1]
+
+        if type(second) is Delegate and second._init_args()[1] == first._init_args()[1]:
+            s_funcs = second.__funcs
+        elif callable(second):
+            s_funcs = (second, )
+        else:
+            raise TypeError('{other!r} is not callable')
+
+        if not s_funcs:
+            return first
+
+        return first._with_funcs(*f_funcs, *s_funcs)
+
     def __radd__(self, other):
         # usage: other += Delegate()
-
         if other is None:
+            # allow None += Delegate()
             return self
-
-        s_funcs = self.__funcs
-        s_kwargs = self._init_args()[1]
-
-        if type(other) is Delegate and other._init_args()[1] == self._init_args()[1]:
-            o_funcs = other.__funcs
-        elif callable(other):
-            o_funcs = (other, )
-        else:
-            raise TypeError('other must be callable')
-
-        if not o_funcs:
-            return self
-
-        return Delegate(*s_funcs, *o_funcs, **s_kwargs)
+        return self.combine(other, self)
 
     def __add__(self, other):
         # usage: Delegate() += other
-        # so other cannot be `None`
+        return self.combine(self, other)
 
+    def __sub__(self, other):
         if other is None:
             raise TypeError('other cannot be None')
 
-        return self.__radd__(other)
-
-    def __sub__(self, other):
         if other is self:
-            if self.__funcs:
-                return Delegate()
-            else:
-                return self
+            return self._with_funcs(())
 
-        elif other is None:
-            raise TypeError('other cannot be None')
+        if isinstance(other, Delegate):
+            to_remove = other.__funcs
+        else:
+            to_remove = (other, )
 
         funcs = list(self.__funcs)
         funcs.reverse()
-
-        if isinstance(other, Delegate):
-            if not other:
-                return self
-
-            for func in other.__funcs:
-                try:
-                    funcs.remove(func)
-                except ValueError:
-                    raise ValueError(f'{func!r} is not in {self!r}')
-
-        else:
+        for func in to_remove:
             try:
-                funcs.remove(other)
+                funcs.remove(func)
             except ValueError:
-                raise ValueError(f'{other!r} is not in {self!r}')
-
+                raise ValueError(f'{func!r} is not in {self!r}')
         funcs.reverse()
 
-        # funcs must changed.
-        if funcs:
-            rv = Delegate(*funcs)
-            return rv
-        else:
-            return Delegate()
+        return self._with_funcs(*funcs)
 
     def __hash__(self):
         if not self.__funcs:
@@ -148,7 +137,7 @@ class Delegate:
         errors = []
         for func in self.__funcs:
             try:
-                ret = self._call_func(func, args, kwargs)
+                ret = func(*args, **kwargs)
             except Exception as e:
                 errors.append(e)
 
@@ -157,8 +146,7 @@ class Delegate:
 
         return ret
 
-    def _call_func(self, func, args, kwargs):
-        return func(*args, **kwargs)
+        
 
 # alias
 delegate = Delegate
