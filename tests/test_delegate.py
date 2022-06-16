@@ -10,7 +10,7 @@ import unittest
 
 from pytest import raises
 
-from pydelegate import Delegate, event, InvokeEmptyDelegateError
+from pydelegate import Delegate, InvokeEmptyDelegateError
 
 def test_delegate_raise_on_empty():
     with raises(InvokeEmptyDelegateError):
@@ -24,15 +24,32 @@ def test_delegate_testable():
     assert Delegate(lambda: None)
     assert Delegate(lambda: None, lambda: None)
 
-def test_delegate_equals():
+def test_delegate_equals_none():
+    assert Delegate() == None
+    assert Delegate(lambda: None, raise_on_empty=True) != None
+    assert Delegate(lambda: None, raise_on_empty=False) != None
+
+def test_delegate_equals_delegate():
     assert Delegate() is not Delegate()
     assert Delegate() == Delegate()
+    assert Delegate(raise_on_empty=True) != Delegate(raise_on_empty=False)
+
     assert Delegate(lambda: None) != Delegate(lambda: None)
+
     fn = lambda: None
     assert Delegate(fn) == Delegate(fn)
+    assert Delegate(fn, raise_on_empty=True) != Delegate(fn, raise_on_empty=False)
     assert Delegate(fn) != Delegate(fn, fn)
 
-def test_delegate_eq_items():
+def test_delegate_equals_function():
+    fn = lambda: None
+    assert Delegate(fn) == fn
+    assert Delegate(fn, raise_on_empty=True)    == fn
+    assert Delegate(fn, raise_on_empty=False)   == fn
+    assert Delegate(raise_on_empty=True)        != fn
+    assert Delegate(raise_on_empty=False)       != fn
+
+def test_delegate_equals():
     def func1(): pass
     def func2(): pass
     def func3(): pass
@@ -55,7 +72,7 @@ def test_delegate_eq_items():
     d2 += func2
     assert d1 != d2
 
-def test_delegate_invoke_order():
+def test_delegate_invoke_order_by_added():
     def func1(ls: list):
         ls.append(1)
 
@@ -69,7 +86,7 @@ def test_delegate_invoke_order():
     d(dest)
     assert dest == [1, 2], 'should first in first run'
 
-def test_delegate_invoke_return_value():
+def test_delegate_invoke_return_last_value():
     def func1():
         return 1
 
@@ -82,6 +99,9 @@ def test_delegate_invoke_return_value():
     assert d() == 2, 'should be the last one'
 
 def test_delegate_add_from_none():
+    assert isinstance(None + Delegate(), Delegate)
+    assert not (None + Delegate())
+
     d = None
     d += Delegate()
     assert isinstance(d, Delegate)
@@ -113,75 +133,27 @@ def test_delegate_remove_order():
     d(src)
     assert src == [1, 2], 'should remove the last match'
 
-def test_delegate_as_class_member():
+def test_delegate_as_class_member_with_class():
     class A:
         d = Delegate()
 
     def func():
         return 1
 
-    A = A()
+    assert not A.d
     A.d += func
     assert A.d
-    assert A.d() == 1, 'call without self argument'
+    assert A.d() == 1
 
-def test_delegate_as_instance_member():
+def test_delegate_as_class_member_with_instance():
     class A:
         d = Delegate()
 
     def func():
         return 1
-
-    a1 = A()
-    a1.d += func
-    assert not A.d
-    assert a1.d
-    assert a1.d() == 1, 'call with self argument'
-
-
-def test_event_as_instance_member():
-    class A:
-        @event
-        def d(self):
-            pass
-
-        e = event('e')
-
-    def func1(self, ls: list):
-        ls.append(1)
-
-    def func2(self, ls: list):
-        ls.append(2)
 
     a1 = A()
     assert not a1.d
-    a1.d += func1
-    a1.d += func2
-    assert not A.d
-    src = []
-    a1.d(src)
-    assert src == [1, 2]
-
-    def func3(self, ls: list):
-        ls.append(3)
-
-    def func4(self, ls: list):
-        ls.append(4)
-
-    a2 = A()
-    assert not a2.e
-    a2.e += func3
-    a2.e += func4
-    assert not A.e
-    src = []
-    a2.e(src)
-    assert src == [3, 4]
-
-def test_event_as_class_member():
-    class A:
-        @event
-        def d(self):
-            pass
-
-    assert A.d is None
-    # should not use `A.d += ?`, this will overwrite the `event`
+    a1.d += func
+    assert a1.d
+    assert a1.d() == 1

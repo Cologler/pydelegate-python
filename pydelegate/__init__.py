@@ -36,6 +36,10 @@ class Delegate:
         self.__funcs = funcs
         self.__raise_on_empty = raise_on_empty
 
+    def _init_args(self):
+        'get the init args of this delegate.'
+        return self.__funcs, {'raise_on_empty': self.__raise_on_empty}
+
     def __repr__(self):
         return f'Delegate{self.__funcs!r}'
 
@@ -44,24 +48,24 @@ class Delegate:
 
     def __radd__(self, other):
         # usage: other += Delegate()
-        s_funcs = self.__funcs
 
-        if isinstance(other, Delegate):
-            if not s_funcs:
-                return other
+        if other is None:
+            return self
+
+        s_funcs = self.__funcs
+        s_kwargs = self._init_args()[1]
+
+        if type(other) is Delegate and other._init_args()[1] == self._init_args()[1]:
             o_funcs = other.__funcs
         elif callable(other):
             o_funcs = (other, )
-        elif other is None:
-            # None + Delegate() -> Delegate()
-            o_funcs = ()
         else:
             raise TypeError('other must be callable')
 
-        if o_funcs:
-            return Delegate(*s_funcs, *o_funcs)
-        else:
+        if not o_funcs:
             return self
+
+        return Delegate(*s_funcs, *o_funcs, **s_kwargs)
 
     def __add__(self, other):
         # usage: Delegate() += other
@@ -110,15 +114,14 @@ class Delegate:
         else:
             return Delegate()
 
-    def __call__(self, *args, **kwargs):
-        return self.invoke(*args, **kwargs)
-
     def __hash__(self):
-        return hash(Delegate) ^ hash(self.__funcs)
+        if not self.__funcs:
+            return hash(None)
+        return hash((Delegate, self.__funcs, self.__raise_on_empty))
 
     def __eq__(self, other):
         if isinstance(other, Delegate):
-            return self.__funcs == other.__funcs
+            return self._init_args() == other._init_args()
 
         elif len(self.__funcs) == 1:
             return self.__funcs[0] == other
@@ -131,6 +134,9 @@ class Delegate:
 
     def __contains__(self, item):
         return item in self.__funcs
+
+    def __call__(self, *args, **kwargs):
+        return self.invoke(*args, **kwargs)
 
     def invoke(self, *args, **kwargs):
         if not self:
@@ -154,76 +160,16 @@ class Delegate:
     def _call_func(self, func, args, kwargs):
         return func(*args, **kwargs)
 
-    def _bound(self, target):
-        d = _BoundedDelegate(target, *self.__funcs)
-        return d
-
-
-class _BoundedDelegate(Delegate):
-    __slots__ = ('__target', )
-
-    def __init__(self, target, *funcs):
-        super().__init__(*funcs)
-        self.__target = target
-
-    def _call_func(self, func, args, kwargs):
-        return func(self.__target, *args, **kwargs)
-
-    def __hash__(self):
-        return hash(_BoundedDelegate) ^ hash(self.__funcs) ^ hash(id(self.__target))
-
-    def __eq__(self, other):
-        if isinstance(other, _BoundedDelegate):
-            return self.__target is other.__target and self.__funcs == other.__funcs
-
-        elif len(self.__funcs) == 0:
-            return other is None
-
-        else:
-            return False
-
-
-
-class event:
-    '''
-    a data descriptor use for class.
-
-    so when you want to get `Delegate` from the attr, we can bound the Delegate with `self` argument.
-    '''
-
-    def __init__(self, func_or_name):
-        self._name = str(getattr(func_or_name, '__name__', func_or_name))
-
-    def __get__(self, obj, cls):
-        if obj is not None:
-            d = vars(obj).get(self._name, Delegate())
-            if d:
-                return d._bound(obj)
-            else:
-                return d
-        else:
-            return None
-
-    def __set__(self, obj, value):
-        if not isinstance(value, Delegate):
-            raise TypeError(f'{value!r} is not a Delegate')
-
-        d = vars(obj)
-        d[self._name] = value
-
 # alias
 delegate = Delegate
 
-# deprecated, but kept compatible
-event_handler = Delegate
-
 __all__ = [
     # public api
-    'Delegate', 'event',
+    'Delegate',
 
     # errors
     'InvokeEmptyDelegateError', 'InvokeAggregateError',
 
     # alias
-    'delegate', 'event_handler',
+    'delegate',
 ]
