@@ -31,18 +31,19 @@ class Delegate:
     `Delegate` is immutable object.
     '''
 
-    __slots__ = ('__funcs', '__raise_on_empty')
+    __slots__ = ('__funcs', '__raise_on_empty', '__raise_on_first_error')
 
-    def __init__(self, *funcs, raise_on_empty=True):
+    def __init__(self, *funcs, raise_on_empty=True, raise_on_first_error=False):
         self.__funcs = funcs
         self.__raise_on_empty = raise_on_empty
+        self.__raise_on_first_error = raise_on_first_error
 
     def _with_funcs(self, *funcs):
         return Delegate(*funcs, raise_on_empty=self.__raise_on_empty)
 
     def __get_opts(self):
         'get the init options of this delegate, use to compare.'
-        return self.__raise_on_empty
+        return (self.__raise_on_empty, self.__raise_on_first_error)
 
     def __repr__(self):
         return f'Delegate{self.__funcs!r}'
@@ -120,23 +121,25 @@ class Delegate:
         invoke this delegate.
         '''
 
-        if not self:
+        if not self.__funcs:
             if self.__raise_on_empty:
                 raise InvokeEmptyDelegateError(f'{self!r} is empty')
             return None
 
-        ret = None
+        rv = None
         errors = []
         for func in self.__funcs:
             try:
-                ret = func(*args, **kwargs)
+                rv = func(*args, **kwargs)
             except Exception as e:
+                if self.__raise_on_first_error:
+                    raise
                 errors.append(e)
 
         if errors:
             raise InvokeAggregateError(errors)
 
-        return ret
+        return rv
 
     @property
     def funcs_list(self):
