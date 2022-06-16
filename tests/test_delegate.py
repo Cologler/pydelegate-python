@@ -24,15 +24,12 @@ def test_delegate_testable():
     assert Delegate(lambda: None)
     assert Delegate(lambda: None, lambda: None)
 
-def test_delegate_equals_none():
-    assert Delegate() == None
-    assert Delegate(lambda: None, raise_on_empty=True) != None
-    assert Delegate(lambda: None, raise_on_empty=False) != None
-
 def test_delegate_equals_delegate():
     assert Delegate() is not Delegate()
     assert Delegate() == Delegate()
-    assert Delegate(raise_on_empty=True) != Delegate(raise_on_empty=False)
+    assert Delegate(raise_on_empty=True)    != Delegate(raise_on_empty=False)
+    assert Delegate(raise_on_empty=True)    == Delegate(raise_on_empty=True)
+    assert Delegate(raise_on_empty=False)   == Delegate(raise_on_empty=False)
 
     assert Delegate(lambda: None) != Delegate(lambda: None)
 
@@ -40,14 +37,6 @@ def test_delegate_equals_delegate():
     assert Delegate(fn) == Delegate(fn)
     assert Delegate(fn, raise_on_empty=True) != Delegate(fn, raise_on_empty=False)
     assert Delegate(fn) != Delegate(fn, fn)
-
-def test_delegate_equals_function():
-    fn = lambda: None
-    assert Delegate(fn) == fn
-    assert Delegate(fn, raise_on_empty=True)    == fn
-    assert Delegate(fn, raise_on_empty=False)   == fn
-    assert Delegate(raise_on_empty=True)        != fn
-    assert Delegate(raise_on_empty=False)       != fn
 
 def test_delegate_equals():
     def func1(): pass

@@ -103,23 +103,14 @@ class Delegate:
 
         return self._with_funcs(*funcs)
 
+    def __get_cmpval(self):
+        return (Delegate, self.__funcs, self.__raise_on_empty)
+
     def __hash__(self):
-        if not self.__funcs:
-            return hash(None)
-        return hash((Delegate, self.__funcs, self.__raise_on_empty))
+        return hash(self.__get_cmpval())
 
     def __eq__(self, other):
-        if isinstance(other, Delegate):
-            return self._init_args() == other._init_args()
-
-        elif len(self.__funcs) == 1:
-            return self.__funcs[0] == other
-
-        elif len(self.__funcs) == 0:
-            return other is None
-
-        else:
-            return False
+        return type(other) is Delegate and self.__get_cmpval() == other.__get_cmpval()
 
     def __contains__(self, item):
         return item in self.__funcs
@@ -128,6 +119,10 @@ class Delegate:
         return self.invoke(*args, **kwargs)
 
     def invoke(self, *args, **kwargs):
+        '''
+        invoke this delegate.
+        '''
+
         if not self:
             if self.__raise_on_empty:
                 raise InvokeEmptyDelegateError(f'{self!r} is empty')
@@ -146,7 +141,13 @@ class Delegate:
 
         return ret
 
-        
+    @property
+    def funcs_list(self):
+        '''
+        get the list of funcs.
+        '''
+        return self.__funcs
+
 
 # alias
 delegate = Delegate
