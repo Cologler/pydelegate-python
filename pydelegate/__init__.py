@@ -40,9 +40,9 @@ class Delegate:
     def _with_funcs(self, *funcs):
         return Delegate(*funcs, raise_on_empty=self.__raise_on_empty)
 
-    def _init_args(self):
-        'get the init args of this delegate.'
-        return self.__funcs, {'raise_on_empty': self.__raise_on_empty}
+    def __get_opts(self):
+        'get the init options of this delegate, use to compare.'
+        return self.__raise_on_empty
 
     def __repr__(self):
         return f'Delegate{self.__funcs!r}'
@@ -54,10 +54,7 @@ class Delegate:
     def combine(first: 'Delegate', second):
         assert isinstance(first, Delegate)
 
-        f_funcs = first.__funcs
-        s_kwargs = first._init_args()[1]
-
-        if type(second) is Delegate and second._init_args()[1] == first._init_args()[1]:
+        if type(second) is Delegate and second.__get_opts() == first.__get_opts():
             s_funcs = second.__funcs
         elif callable(second):
             s_funcs = (second, )
@@ -67,7 +64,7 @@ class Delegate:
         if not s_funcs:
             return first
 
-        return first._with_funcs(*f_funcs, *s_funcs)
+        return first._with_funcs(*first.__funcs, *s_funcs)
 
     def __radd__(self, other):
         # usage: other += Delegate()
@@ -104,7 +101,7 @@ class Delegate:
         return self._with_funcs(*funcs)
 
     def __get_cmpval(self):
-        return (Delegate, self.__funcs, self.__raise_on_empty)
+        return (Delegate, self.__funcs, self.__get_opts())
 
     def __hash__(self):
         return hash(self.__get_cmpval())
