@@ -5,7 +5,7 @@ description = "a python version delegate like C#"
 authors = ["Cologler <skyoflw@gmail.com>"]
 license = "MIT"
 homepage = "https://github.com/Cologler/pydelegate-python"
-keywords = ["delegate", "hook"]
+keywords = ["delegate"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
