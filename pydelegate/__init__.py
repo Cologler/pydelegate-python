@@ -30,10 +30,11 @@ class Delegate:
     `Delegate` is immutable object.
     '''
 
-    __slots__ = ('__funcs', )
+    __slots__ = ('__funcs', '__raise_on_empty')
 
-    def __init__(self, *funcs):
+    def __init__(self, *funcs, raise_on_empty=True):
         self.__funcs = funcs
+        self.__raise_on_empty = raise_on_empty
 
     def __repr__(self):
         return f'Delegate{self.__funcs!r}'
@@ -133,7 +134,9 @@ class Delegate:
 
     def invoke(self, *args, **kwargs):
         if not self:
-            raise InvokeEmptyDelegateError(f'{self!r} is empty')
+            if self.__raise_on_empty:
+                raise InvokeEmptyDelegateError(f'{self!r} is empty')
+            return None
 
         ret = None
         errors = []

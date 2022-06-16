@@ -12,9 +12,12 @@ from pytest import raises
 
 from pydelegate import Delegate, event, InvokeEmptyDelegateError
 
-def test_empty_delegate_invoke_raise_error():
+def test_delegate_raise_on_empty():
     with raises(InvokeEmptyDelegateError):
         Delegate()()
+
+def test_delegate_raise_on_empty_is_false():
+    assert None is Delegate(raise_on_empty=False)()
 
 def test_delegate_testable():
     assert not Delegate(), 'test empty delegate should be false'
